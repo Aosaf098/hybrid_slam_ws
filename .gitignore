@@ -1,3 +1,31 @@
-README.md
-*.mp4
+# -------------------------------------
+# ROS 2 Build & Workspace Folders
+# -------------------------------------
+build/
+install/
+log/
+
+# -------------------------------------
+# IDE & Python Caches
+# -------------------------------------
 .vscode/
+.idea/
+__pycache__/
+*.pyc
+
+# -------------------------------------
+# Datasets & Big Folders
+# -------------------------------------
+TEST_DATASET/
+baseline_results/
+
+# -------------------------------------
+# Benchmarking Artifacts & Logs
+# -------------------------------------
+*.zip
+*.csv
+*.log
+*.tum
+
+# Trajectory outputs (ignores all variations of the text files)
+*Trajectory*.txt

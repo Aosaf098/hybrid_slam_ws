@@ -7,7 +7,7 @@ project(ros2_orb_slam3)
 # Enforce use of C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O0")
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # REDUNDANT?
 
@@ -19,7 +19,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-# find_package(your_custom_msg_interface REQUIRED)
+find_package(hybrid_slam_interfaces REQUIRED) #* UPDATED: Link custom feature interface
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV 4.2 REQUIRED)
 find_package(Eigen3 3.3.0 REQUIRED) # Matched with Sophus
@@ -51,7 +51,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclpy
   std_msgs
   sensor_msgs
-  # your_custom_msg_interface
+  hybrid_slam_interfaces #* UPDATED: Added target dependency macro
   cv_bridge
   image_transport
   OpenCV

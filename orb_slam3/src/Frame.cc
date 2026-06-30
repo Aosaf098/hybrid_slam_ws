@@ -284,6 +284,96 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     AssignFeaturesToGrid();
 }
+// =========================================================================
+// HYBRID DECOUPLED FRAME CONSTRUCTOR
+// =========================================================================
+// =========================================================================
+// HYBRID DECOUPLED FRAME CONSTRUCTOR
+// =========================================================================
+// =========================================================================
+// HYBRID DECOUPLED FRAME CONSTRUCTOR
+// =========================================================================
+Frame::Frame(const std::vector<cv::KeyPoint> &vKeys, const cv::Mat &mDescriptors, const double &timeStamp, ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pLastFrame)
+    : mpORBvocabulary(voc), mpORBextractorLeft(NULL), mpORBextractorRight(NULL), mTimeStamp(timeStamp), 
+      mK(static_cast<Pinhole*>(pCamera)->toK()), mK_(static_cast<Pinhole*>(pCamera)->toK_()),
+      mpCamera(pCamera), mpCamera2(nullptr), mDistCoef(distCoef), mbf(bf), mThDepth(thDepth),
+      mPredBias(), mImuBias(), mpImuPreintegrated(NULL), mpLastKeyFrame(NULL), 
+      mpPrevFrame(pLastFrame), mpImuPreintegratedFrame(NULL), 
+      mpReferenceKF(static_cast<KeyFrame*>(NULL)), mbIsSet(false), 
+      mbImuPreintegrated(false), mpMutexImu(NULL)
+{
+    // 1. Assign camera parameters and grid configurations
+    mnId = nNextId++;
+    mnScaleLevels = 8;        
+    mfScaleFactor = 1.2f;     
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors.resize(mnScaleLevels);
+    mvLevelSigma2.resize(mnScaleLevels);
+    mvScaleFactors[0]=1.0f;
+    mvLevelSigma2[0]=1.0f;
+    for(int i=1; i<mnScaleLevels; i++) {
+        mvScaleFactors[i] = mvScaleFactors[i-1]*mfScaleFactor;
+        mvLevelSigma2[i] = mvScaleFactors[i]*mvScaleFactors[i];
+    }
+    mvInvScaleFactors.resize(mnScaleLevels);
+    mvInvLevelSigma2.resize(mnScaleLevels);
+    for(int i=0; i<mnScaleLevels; i++) {
+        mvInvScaleFactors[i] = 1.0f/mvScaleFactors[i];
+        mvInvLevelSigma2[i] = 1.0f/mvLevelSigma2[i];
+    }
+
+    // 2. Ingest Features Bypassing CPU Extractor
+    mvKeys = vKeys;
+    mDescriptors.copyTo(this->mDescriptors);
+    N = mvKeys.size();
+
+    if(mvKeys.empty()) return;
+
+    // 3. Undistort Keypoints
+    // std::cout << "N=" << N
+    //       << " mvKeys=" << mvKeys.size()
+    //       << " distCoef=" << mDistCoef.size()
+    //       << " distCoef.empty=" << mDistCoef.empty() << std::endl;
+    UndistortKeyPoints();
+    // std::cout << "mvKeysUn=" << mvKeysUn.size() << std::endl;
+
+    // 4. Stereo/Monocular Tracking Arrays & Counters
+    mvuRight = vector<float>(N, -1.0f);
+    mvDepth = vector<float>(N, -1.0f);
+    mvpMapPoints = vector<MapPoint*>(N, static_cast<MapPoint*>(NULL));
+    mvbOutlier = vector<bool>(N, false);
+    
+    Nleft = -1;
+    Nright = -1;
+    monoLeft = -1;
+    monoRight = -1;
+
+    // 5. Image Bounds and Static Math Variables (CRITICAL FOR PREVENTING EIGEN MATH CRASHES)
+    if(mbInitialComputations)
+    {
+        mnMinX = 0.0f; mnMaxX = 752.0f;
+        mnMinY = 0.0f; mnMaxY = 480.0f;
+
+        mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
+        mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
+
+        fx = mpCamera->getParameter(0);
+        fy = mpCamera->getParameter(1);
+        cx = mpCamera->getParameter(2);
+        cy = mpCamera->getParameter(3);
+        invfx = 1.0f/fx;
+        invfy = 1.0f/fy;
+
+        mbInitialComputations=false;
+    }
+
+    // 6. Assign Features to the Spatial Grid
+    AssignFeaturesToGrid();
+
+    // 7. Dummy Image for the Map Viewer UI (CRITICAL FOR PREVENTING GUI CRASH)
+    imgLeft = cv::Mat::zeros(480, 752, CV_8UC1);
+    mnDataset = 0; // Prevent uninitialized dataset ID
+}
 
 
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pPrevF, const IMU::Calib &ImuCalib)

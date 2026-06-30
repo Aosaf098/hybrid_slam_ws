@@ -386,6 +386,7 @@ Sophus::SE3f System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const
 // Returns the camera pose (empty if tracking fails).
 Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, const vector<IMU::Point>& vImuMeas, string filename)
 {
+    
 
     {
         unique_lock<mutex> lock(mMutexReset);
@@ -464,7 +465,56 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
     return Tcw;
 }
 
+// HYBRID DECOUPLED ENGINE: Bypasses extraction and passes features directly to the Tracking thread
+Sophus::SE3f System::TrackMonocularFeatures(const std::vector<cv::KeyPoint> &vKeys, const cv::Mat &mDescriptors, const double &timestamp, const vector<IMU::Point>& vImuMeas, string filename)
+{
+    if(mSensor!=MONOCULAR)
+    {
+        cerr << "ERROR: you called TrackMonocularFeatures but input sensor was not set to Monocular." << endl;
+        exit(-1);
+    }
 
+    // Check mode change
+    {
+        unique_lock<mutex> lock(mMutexMode);
+        if(mbActivateLocalizationMode)
+        {
+            mpLocalMapper->RequestStop();
+            while(!mpLocalMapper->isStopped()) usleep(1000);
+            mpTracker->InformOnlyTracking(true);
+            mbActivateLocalizationMode = false;
+        }
+        if(mbDeactivateLocalizationMode)
+        {
+            mpTracker->InformOnlyTracking(false);
+            mpLocalMapper->Release();
+            mbDeactivateLocalizationMode = false;
+        }
+    }
+
+    // Check reset
+    {
+        unique_lock<mutex> lock(mMutexReset);
+        if(mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+            mbResetActiveMap = false;
+        }
+        else if(mbResetActiveMap)
+        {
+            mpTracker->ResetActiveMap();
+            mbResetActiveMap = false;
+        }
+    }
+
+    if (mTrackingState == Tracking::LOST) {
+        mpTracker->Reset();
+    }
+
+    // Pass the lightweight arrays to the Tracker
+    return mpTracker->GrabImageMonocularFeatures(vKeys, mDescriptors, timestamp, filename);
+}
 
 void System::ActivateLocalizationMode()
 {

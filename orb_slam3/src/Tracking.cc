@@ -48,6 +48,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
 {
+    mImGray = cv::Mat::zeros(480, 752, CV_8UC1);
+    
     // Load camera parameters from settings file
     if(settings){
         newParameterLoader(settings);
@@ -1650,7 +1652,26 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     return mCurrentFrame.GetPose();
 }
 
+// =========================================================================
+// HYBRID DECOUPLED TRACKER: Receives pre-extracted features
+// =========================================================================
+Sophus::SE3f Tracking::GrabImageMonocularFeatures(const std::vector<cv::KeyPoint> &vKeys, const cv::Mat &mDescriptors, const double &timestamp, string filename)
+{
+    // Create a dummy black image. The MapDrawer/Viewer threads will segfault if they try to render a completely empty matrix!
+    // We default to EuRoC dimensions (752x480).
+    mImGray = cv::Mat::zeros(480, 752, CV_8UC1); 
 
+    // Build the Frame object using our new Custom Constructor
+    if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET)
+        mCurrentFrame = Frame(vKeys, mDescriptors, timestamp, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth);
+    else
+        mCurrentFrame = Frame(vKeys, mDescriptors, timestamp, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame);
+
+    // Call the core tracking mathematics loop
+    Track();
+
+    return mCurrentFrame.GetPose();
+}
 void Tracking::GrabImuData(const IMU::Point &imuMeasurement)
 {
     unique_lock<mutex> lock(mMutexImuQueue);

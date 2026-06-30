@@ -72,7 +72,8 @@ public:
     Sophus::SE3f GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp, string filename);
     Sophus::SE3f GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp, string filename);
     Sophus::SE3f GrabImageMonocular(const cv::Mat &im, const double &timestamp, string filename);
-
+    // HYBRID DECOUPLED TRACKER: Receives pre-extracted features
+    Sophus::SE3f GrabImageMonocularFeatures(const std::vector<cv::KeyPoint> &vKeys, const cv::Mat &mDescriptors, const double &timestamp, string filename);
     void GrabImuData(const IMU::Point &imuMeasurement);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);

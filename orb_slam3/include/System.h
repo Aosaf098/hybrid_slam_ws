@@ -124,6 +124,8 @@ public:
     // Returns the camera pose (empty if tracking fails).
     Sophus::SE3f TrackMonocular(const cv::Mat &im, const double &timestamp, const vector<IMU::Point>& vImuMeas = vector<IMU::Point>(), string filename="");
 
+    //* HYBRID DECOUPLED API: Ingests pre-extracted features instead of raw pixels
+    Sophus::SE3f TrackMonocularFeatures(const std::vector<cv::KeyPoint> &vKeys, const cv::Mat &mDescriptors, const double &timestamp, const vector<IMU::Point>& vImuMeas = vector<IMU::Point>(), string filename="");
 
     // This stops local mapping thread (map building) and performs only camera tracking.
     void ActivateLocalizationMode();

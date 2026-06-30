@@ -120,12 +120,12 @@ python3 -c "import cv2; print(cv2.__version__)"
 
 ## 2. Installation
 
-Follow the steps below to create the ```ros2_test``` workspace, install dependencies and build the package. Note, the workspace must be named ```ros2_test``` due to a HARDCODED path in the python node. I leave it to the developers to change this behavior as they see fit.
+Follow the steps below to create the ```hybrid_slam_ws``` workspace, install dependencies and build the package. Note, the workspace must be named ```hybrid_slam_ws``` due to a HARDCODED path in the python node. I leave it to the developers to change this behavior as they see fit.
 
 ```bash
 cd ~
-mkdir -p ~/ros2_test/src
-cd ~/ros2_test/src
+mkdir -p ~/hybrid_slam_ws/src
+cd ~/hybrid_slam_ws/src
 git clone https://github.com/Mechazo11/ros2_orb_slam3.git
 cd .. # make sure you are in ~/ros2_ws root directory
 rosdep install -r --from-paths src --ignore-src -y --rosdistro humble
